@@ -27,12 +27,12 @@ help:
 .PHONY: run
 run:
 	@echo "Running project..."
-	@echo "Define your own run commands per project"
+	@cargo run
 
 .PHONY: build
 build:
 	@echo "Building project..."
-	@echo "Define your own build commands per project"
+	@cargo build --release
 
 # -----------------------------------------
 # Tests
@@ -40,7 +40,7 @@ build:
 .PHONY: test
 test:
 	@echo "Running tests..."
-	@echo "Define your own test commands per project"
+	@cargo test
 
 # -----------------------------------------
 # POC / Experiments
@@ -51,17 +51,9 @@ poc:
 	@echo "Customize this target per project"
 
 # -----------------------------------------
-# Documentation
-# -----------------------------------------
-.PHONY: docs
-docs:
-	@echo "Opening / generating documentation..."
-	@echo "Customize per project"
-
-# -----------------------------------------
 # Clean
 # -----------------------------------------
 .PHONY: clean
 clean:
 	@echo "Cleaning build artifacts..."
-	@echo "Define your own clean commands per project"
+	@cargo clean
