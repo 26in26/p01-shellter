@@ -47,8 +47,9 @@ test:
 # -----------------------------------------
 .PHONY: poc
 poc:
-	@echo "Running POC / experiments..."
-	@echo "Customize this target per project"
+	@echo "Running POC"
+	@rustc ./POC/experiments/main.rs
+	@./main
 
 # -----------------------------------------
 # Clean
