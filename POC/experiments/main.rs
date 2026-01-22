@@ -10,15 +10,20 @@ fn main() {
 
     loop {
         print!("{}", LINE);
+        // clean stdout buffer
         io::stdout().flush().unwrap();
+        // clean command buffer
         command.clear();
 
+        // read line from stdin
         if let Err(e) = io::stdin().read_line(&mut command) {
             eprintln!("error: {e}");
             break;
         };
 
+        // trim command from whitespace and backslash n
         let input = command.trim();
+        // check if input is empty
         if input.is_empty() {
             continue;
         }
@@ -31,6 +36,7 @@ fn main() {
             break;
         }
 
+        // run command (fork() + exec() + wait())
         match Command::new(program).args(args).status() {
             Ok(_) => {}
             Err(e) => {

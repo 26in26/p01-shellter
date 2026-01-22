@@ -36,7 +36,7 @@
 ## Status
 
 - [x] Design
-- [ ] POC
+- [x] POC
 - [ ] Core implementation
 - [ ] Tests
 - [ ] Documentation
