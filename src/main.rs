@@ -1,7 +1,11 @@
+mod executor;
 mod parser;
+mod shell;
 mod shell_error;
 mod shell_state;
 
 fn main() {
-    println!("Hello, world!");
+    let state = shell_state::new();
+    let mut shell = shell::new(state);
+    shell.run();
 }
