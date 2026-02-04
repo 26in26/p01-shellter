@@ -9,7 +9,7 @@ pub fn run(cmd: &ExecCommand, state: &mut ShellState) -> Result<i32, ShellError>
 
     match env::set_current_dir(&target_path) {
         Ok(_) => {
-            state.cwd = target_path;
+            state.set_cwd(target_path);
         }
         Err(err) => {
             eprintln!("cd: {}: {}", target_path.display(), err);

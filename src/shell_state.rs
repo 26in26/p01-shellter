@@ -1,9 +1,24 @@
 use std::path::{self, absolute};
 
 pub struct ShellState {
-    // an aboslute path to the current working directory
-    pub cwd: path::PathBuf,
+    cwd: path::PathBuf,
     pub exit: bool,
+}
+
+impl ShellState {
+    // get absolute path to the current working directory
+    pub fn get_cwd(&self) -> &path::PathBuf {
+        return &self.cwd;
+    }
+
+    pub fn set_cwd(&mut self, cwd: path::PathBuf) {
+        let absolute_cwd = match absolute(cwd) {
+            Ok(path) => path,
+            Err(_) => return,
+        };
+
+        self.cwd = absolute_cwd;
+    }
 }
 
 pub fn new() -> ShellState {
@@ -13,6 +28,7 @@ pub fn new() -> ShellState {
         Ok(path) => path,
         Err(_) => path::PathBuf::from("/"),
     };
+
     ShellState {
         cwd: absolute_cwd,
         exit: false,

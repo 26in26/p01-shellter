@@ -8,9 +8,9 @@ pub fn get_target_path(cmd: &ExecCommand, state: &ShellState) -> PathBuf {
             if path.is_absolute() {
                 path
             } else {
-                state.cwd.join(path)
+                state.get_cwd().join(path)
             }
         }
-        None => state.cwd.clone(),
+        None => state.get_cwd().clone(),
     }
 }

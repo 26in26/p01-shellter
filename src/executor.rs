@@ -25,7 +25,11 @@ fn execute_simple(cmd: &ExecCommand, state: &mut ShellState) -> Result<(), Shell
         }
         "pwd" => builtins::pwd::run(cmd, state),
         "exit" => builtins::exit::run(cmd, state),
-        _ => external::run(cmd, state)?,
+        _ => {
+            if let Err(ShellError::ExecutionError(e)) = external::run(cmd, state) {
+                eprintln!("{}", e);
+            };
+        }
     };
 
     Ok(())
