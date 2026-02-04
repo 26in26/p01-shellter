@@ -15,7 +15,7 @@ pub fn new(state: ShellState) -> Shell {
 
 impl Shell {
     fn print_prompt(&self) {
-        print!("rsh {}❯ ", self.state.current_directory);
+        print!("rsh ❯ ");
         io::stdout().flush().unwrap();
     }
 

@@ -17,8 +17,12 @@ pub fn execute(cmd: &Command, state: &mut ShellState) -> Result<(), ShellError> 
 
 fn execute_simple(cmd: &ExecCommand, state: &mut ShellState) -> Result<(), ShellError> {
     match cmd.program.as_str() {
-        "ls" => builtins::ls::run(cmd, state),
-        "cd" => builtins::cd::run(cmd, state),
+        "ls" => {
+            builtins::ls::run(cmd, state);
+        }
+        "cd" => {
+            builtins::cd::run(cmd, state);
+        }
         "pwd" => builtins::pwd::run(cmd, state),
         "exit" => builtins::exit::run(cmd, state),
         _ => external::run(cmd, state)?,
