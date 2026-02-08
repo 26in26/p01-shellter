@@ -1,34 +1,36 @@
-use crate::executor::{ExecCommand, Executable, IoWiring};
+use super::utils;
+use crate::executor::{Executable, IoWiring};
 use crate::shell_error::ShellError;
 use crate::shell_state::ShellState;
 
 pub struct Pwd {
-    wires: Option<IoWiring>,
+    wires: IoWiring,
 }
 
 pub fn new() -> Pwd {
-    Pwd { wires: None }
+    Pwd {
+        wires: utils::get_default_wiring(),
+    }
 }
 
 impl Executable for Pwd {
     fn spawn(&mut self, state: &mut ShellState) -> Result<(), ShellError> {
         let IoWiring {
             stdin: _,
-            mut stdout,
+            stdout,
             stderr: _,
-        } = self
-            .wires
-            .take()
-            .expect("wire() must be called before spawn()");
+        } = &mut self.wires;
 
         let cwd = state.get_cwd();
-        writeln!(stdout, "{}", cwd.to_string_lossy());
+        writeln!(stdout, "{}", cwd.to_string_lossy()).map_err(|e| {
+            ShellError::ExecutionError(format!("pwd: can't write to stdout: {}", e.to_string()))
+        })?;
 
         Ok(())
     }
 
     fn wire(&mut self, wiring: crate::executor::IoWiring) -> Result<(), ShellError> {
-        self.wires = Some(wiring);
+        self.wires = wiring;
         Ok(())
     }
 

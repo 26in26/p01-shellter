@@ -1,4 +1,4 @@
-use crate::executor::builtins::utils::get_target_path;
+use crate::executor::builtins::utils::{get_default_wiring, get_target_path};
 use crate::executor::{ExecCommand, Executable, IoWiring};
 use crate::shell_error::ShellError;
 use crate::shell_state::ShellState;
@@ -26,10 +26,7 @@ impl<'a> Executable for Ls<'a> {
             stdin: _,
             mut stdout,
             mut stderr,
-        } = self
-            .wires
-            .take()
-            .expect("wire() must be called before spawn()");
+        } = self.wires.take().unwrap_or_else(|| get_default_wiring());
 
         let target: PathBuf = get_target_path(self.cmd, state);
 
@@ -37,7 +34,7 @@ impl<'a> Executable for Ls<'a> {
             let entries = match fs::read_dir(&target) {
                 Ok(entries) => entries,
                 Err(err) => {
-                    writeln!(stderr, "ls: {}: {}", target.display(), err);
+                    let _ = writeln!(stderr, "ls: {}: {}", target.display(), err);
                     return 1;
                 }
             };
@@ -46,16 +43,16 @@ impl<'a> Executable for Ls<'a> {
                 let entry = match entry {
                     Ok(entry) => entry,
                     Err(err) => {
-                        writeln!(stderr, "ls: {}: {}", target.display(), err);
+                        let _ = writeln!(stderr, "ls: {}: {}", target.display(), err);
                         continue;
                     }
                 };
 
                 let name = entry.file_name();
-                write!(stdout, "{}  ", name.to_string_lossy());
+                let _ = write!(stdout, "{}  ", name.to_string_lossy());
             }
 
-            writeln!(stdout);
+            let _ = writeln!(stdout);
 
             0
         }));
