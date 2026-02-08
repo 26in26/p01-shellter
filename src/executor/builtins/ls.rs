@@ -1,33 +1,80 @@
 use crate::executor::builtins::utils::get_target_path;
+use crate::executor::{ExecCommand, Executable, IoWiring};
 use crate::shell_error::ShellError;
-use crate::{executor::ExecCommand, shell_state::ShellState};
+use crate::shell_state::ShellState;
 use std::fs;
 use std::path::PathBuf;
+use std::thread;
 
-pub fn run(cmd: &ExecCommand, state: &ShellState) -> Result<i32, ShellError> {
-    let target: PathBuf = get_target_path(cmd, state);
+pub struct Ls<'a> {
+    cmd: &'a ExecCommand,
+    handle: Option<thread::JoinHandle<i32>>,
+    wires: Option<IoWiring>,
+}
 
-    let entries = match fs::read_dir(&target) {
-        Ok(entries) => entries,
-        Err(err) => {
-            eprintln!("ls: {}: {}", target.display(), err);
-            return Ok(1);
-        }
-    };
+pub fn new(cmd: &ExecCommand) -> Ls<'_> {
+    Ls {
+        cmd: cmd,
+        handle: None,
+        wires: None,
+    }
+}
 
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(err) => {
-                eprintln!("ls: {}: {}", target.display(), err);
-                continue;
+impl<'a> Executable for Ls<'a> {
+    fn spawn(&mut self, state: &mut ShellState) -> Result<(), ShellError> {
+        let IoWiring {
+            stdin: _,
+            mut stdout,
+            mut stderr,
+        } = self
+            .wires
+            .take()
+            .expect("wire() must be called before spawn()");
+
+        let target: PathBuf = get_target_path(self.cmd, state);
+
+        self.handle = Some(thread::spawn(move || {
+            let entries = match fs::read_dir(&target) {
+                Ok(entries) => entries,
+                Err(err) => {
+                    writeln!(stderr, "ls: {}: {}", target.display(), err);
+                    return 1;
+                }
+            };
+
+            for entry in entries {
+                let entry = match entry {
+                    Ok(entry) => entry,
+                    Err(err) => {
+                        writeln!(stderr, "ls: {}: {}", target.display(), err);
+                        continue;
+                    }
+                };
+
+                let name = entry.file_name();
+                write!(stdout, "{}  ", name.to_string_lossy());
             }
-        };
 
-        let name = entry.file_name();
-        print!("{}  ", name.to_string_lossy());
+            writeln!(stdout);
+
+            0
+        }));
+
+        Ok(())
     }
 
-    println!();
-    Ok(0)
+    fn wire(&mut self, wiring: crate::executor::IoWiring) -> Result<(), ShellError> {
+        self.wires = Some(wiring);
+        Ok(())
+    }
+
+    fn wait(&mut self) -> Result<i32, ShellError> {
+        if let Some(handle) = self.handle.take() {
+            Ok(handle
+                .join()
+                .map_err(|_| ShellError::ExecutionError("thread panicked".to_string()))?)
+        } else {
+            Ok(0)
+        }
+    }
 }
