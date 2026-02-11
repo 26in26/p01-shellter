@@ -29,10 +29,10 @@ pub fn parse(line: &str) -> Result<Command, ShellError> {
         return build_pipe_command(&parts);
     }
 
-    Ok(Command::Simple(build_simple_command(&parts)))
+    Ok(build_simple_command(&parts))
 }
 
-fn build_simple_command(parts: &Vec<Token>) -> SimpleCommand {
+fn build_simple_command(parts: &Vec<Token>) -> Command {
     let mut program = String::new();
     let mut args = Vec::new();
 
@@ -46,7 +46,7 @@ fn build_simple_command(parts: &Vec<Token>) -> SimpleCommand {
         }
     });
 
-    SimpleCommand { program, args }
+    Command::Simple(SimpleCommand { program, args })
 }
 
 fn build_pipe_command(parts: &Vec<Token>) -> Result<Command, ShellError> {
