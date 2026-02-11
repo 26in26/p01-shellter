@@ -31,15 +31,14 @@
 ## Timeline
 
 - **Week 1:** Design, research, POC
-- **Week 2:** Implementation, testing, docs
+- **Week 2:** Implementation, docs
 
 ## Status
 
 - [x] Design
 - [x] POC
-- [ ] Core implementation
-- [ ] Tests
-- [ ] Documentation
+- [x] Core implementation
+- [x] Documentation
 
 ## 🛠 Tech Stack
 
