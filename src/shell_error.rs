@@ -5,6 +5,7 @@ pub enum ShellError {
     IoError(io::Error),
     ParseError(String),
     ExecutionError(String),
+    CommandNotFound(String),
 }
 
 impl From<io::Error> for ShellError {

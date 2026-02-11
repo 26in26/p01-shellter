@@ -1,7 +1,9 @@
-use super::executor::execute;
-use super::parser::parse;
-use super::shell_error::ShellError;
-use super::shell_state::ShellState;
+use crate::executor::execute;
+use crate::parser::parse;
+use crate::shell_error::ShellError;
+use crate::shell_state::ShellState;
+use crate::utils::color::{BOLD, ITALIC, RESET};
+use crate::utils::theme;
 
 use std::io::{self, Write};
 
@@ -14,11 +16,6 @@ pub fn new(state: ShellState) -> Shell {
 }
 
 impl Shell {
-    fn print_prompt(&self) {
-        print!("rsh ❯ ");
-        io::stdout().flush().unwrap();
-    }
-
     pub fn run(&mut self) {
         let mut line = String::new();
 
@@ -28,8 +25,32 @@ impl Shell {
             if let Err(ShellError::IoError(_)) = self.read_command(&mut line) {
                 continue;
             }
-            let cmd = parse(&line).unwrap();
-            execute(&cmd, &mut self.state).unwrap();
+
+            let cmd = match parse(&line) {
+                Ok(cmd) => cmd,
+                Err(ShellError::ParseError(e)) => {
+                    eprintln!("Parse error: {}", e);
+                    continue;
+                }
+                _ => {
+                    eprintln!("Unknown error");
+                    continue;
+                }
+            };
+
+            match execute(&cmd, &mut self.state) {
+                Ok(_) => {}
+                Err(ShellError::CommandNotFound(cmd)) => {
+                    eprintln!("Command not found: {}", cmd);
+                }
+                Err(ShellError::ExecutionError(msg)) => {
+                    eprintln!("Execution error: {}", msg);
+                }
+                Err(ShellError::IoError(e)) => {
+                    eprintln!("IO error: {}", e);
+                }
+                _ => {}
+            }
 
             if self.state.exit {
                 break;
@@ -40,5 +61,27 @@ impl Shell {
     fn read_command(&self, command: &mut String) -> Result<(), ShellError> {
         io::stdin().read_line(command)?;
         Ok(())
+    }
+
+    fn print_prompt(&self) {
+        let status = if 1 == 0 {
+            theme::success()
+        } else {
+            theme::error()
+        };
+
+        print!(
+            "{}{}rsh{} {}{}{}{} {}❯{} ",
+            BOLD,
+            theme::rust(),
+            RESET,
+            ITALIC,
+            theme::path(),
+            self.state.get_cwd().display(),
+            RESET,
+            status,
+            RESET
+        );
+        io::stdout().flush().unwrap();
     }
 }

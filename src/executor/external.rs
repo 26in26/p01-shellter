@@ -1,45 +1,48 @@
+use std::io::ErrorKind;
 use std::process::{Command, Stdio};
 
-use crate::executor::{ExecCommand, Executable, IoWiring};
+use crate::executor::{ExecCommand, Executable, IoWiring, Stream};
 use crate::shell_error::ShellError;
 use crate::shell_state::ShellState;
 
-pub struct External<'a> {
-    cmd: &'a ExecCommand,
+pub struct External {
+    program: String,
+    command: Command,
     child: Option<std::process::Child>,
     wires: Option<IoWiring>,
 }
 
-pub fn new(cmd: &ExecCommand) -> External<'_> {
+pub fn new(cmd: &ExecCommand) -> External {
+    let program = cmd.program.clone();
+    let args = cmd.args.clone();
+
+    let mut command = Command::new(&program);
+    command.args(&args);
+    command
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
     External {
-        cmd: cmd,
+        program,
+        command,
         child: None,
-        wires: None,
+        wires: Some(IoWiring {
+            stdin: Stream::Inherited,
+            stdout: Stream::Inherited,
+            stderr: Stream::Inherited,
+        }),
     }
 }
 
-impl<'a> Executable for External<'a> {
-    fn spawn(&mut self, state: &mut ShellState) -> Result<(), ShellError> {
-        let mut cmd = Command::new(&self.cmd.program);
-        cmd.args(&self.cmd.args).current_dir(state.get_cwd());
-
-        if self.wires.is_some() {
-            cmd.stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
-        } else {
-            cmd.stdin(Stdio::inherit())
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit());
-        };
-
-        let mut child = cmd.spawn().map_err(|e| {
-            ShellError::ExecutionError(format!("failed to execute {}: {}", self.cmd.program, e))
+impl Executable for External {
+    fn spawn(&mut self, _: &mut ShellState) -> Result<(), ShellError> {
+        let mut child = self.command.spawn().map_err(|e| match e.kind() {
+            ErrorKind::NotFound => ShellError::CommandNotFound(self.program.clone()),
+            _ => ShellError::ExecutionError(format!("failed to execute {}: {}", self.program, e)),
         })?;
 
-        if self.wires.is_some() {
-            self.wire_child(&mut child);
-        }
+        self.wire_child(&mut child);
 
         self.child = Some(child);
 
@@ -47,6 +50,33 @@ impl<'a> Executable for External<'a> {
     }
 
     fn wire(&mut self, wiring: IoWiring) -> Result<(), ShellError> {
+        match wiring.stdin {
+            Stream::Piped(_) => {
+                self.command.stdin(Stdio::piped());
+            }
+            Stream::Inherited => {
+                self.command.stdin(Stdio::inherit());
+            }
+        }
+
+        match wiring.stdout {
+            Stream::Piped(_) => {
+                self.command.stdout(Stdio::piped());
+            }
+            Stream::Inherited => {
+                self.command.stdout(Stdio::inherit());
+            }
+        }
+
+        match wiring.stderr {
+            Stream::Piped(_) => {
+                self.command.stderr(Stdio::piped());
+            }
+            Stream::Inherited => {
+                self.command.stderr(Stdio::inherit());
+            }
+        }
+
         self.wires = Some(wiring);
 
         Ok(())
@@ -64,33 +94,35 @@ impl<'a> Executable for External<'a> {
             .map_err(|e| {
                 ShellError::ExecutionError(format!(
                     "failed to wait for command {}: {}",
-                    self.cmd.program, e
+                    self.program, e
                 ))
             })
     }
 }
 
-impl<'a> External<'a> {
+impl External {
     fn wire_child(&mut self, child: &mut std::process::Child) {
-        if let Some(wiring) = self.wires.take() {
-            let IoWiring {
-                mut stdin,
-                mut stdout,
-                mut stderr,
-            } = wiring;
+        let Some(wiring) = self.wires.take() else {
+            return;
+        };
 
+        if let Stream::Piped(mut stdin) = wiring.stdin {
             if let Some(mut child_stdin) = child.stdin.take() {
                 std::thread::spawn(move || {
                     std::io::copy(&mut stdin, &mut child_stdin).ok();
                 });
             }
+        }
 
+        if let Stream::Piped(mut stdout) = wiring.stdout {
             if let Some(mut child_stdout) = child.stdout.take() {
                 std::thread::spawn(move || {
                     std::io::copy(&mut child_stdout, &mut stdout).ok();
                 });
             }
+        }
 
+        if let Stream::Piped(mut stderr) = wiring.stderr {
             if let Some(mut child_stderr) = child.stderr.take() {
                 std::thread::spawn(move || {
                     std::io::copy(&mut child_stderr, &mut stderr).ok();

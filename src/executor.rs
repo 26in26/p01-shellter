@@ -10,10 +10,19 @@ pub mod builtins;
 pub mod executables;
 pub mod external;
 
+pub enum Stream<T> {
+    Piped(T),
+    Inherited,
+}
+
+pub type Stdin = Stream<Box<dyn Read + Send>>;
+pub type Stdout = Stream<Box<dyn Write + Send>>;
+pub type Stderr = Stream<Box<dyn Write + Send>>;
+
 pub struct IoWiring {
-    pub stdin: Box<dyn Read + Send>,
-    pub stdout: Box<dyn Write + Send>,
-    pub stderr: Box<dyn Write + Send>,
+    pub stdin: Stdin,
+    pub stdout: Stdout,
+    pub stderr: Stderr,
 }
 
 pub trait Executable {
@@ -26,58 +35,13 @@ pub trait Executable {
 
 pub fn execute(cmd: &Command, state: &mut ShellState) -> Result<(), ShellError> {
     let mut executable = executables::make_executable(cmd);
-    let builtin_wiring = IoWiring {
-        stdin: Box::new(std::io::stdin()),
-        stdout: Box::new(std::io::stdout()),
-        stderr: Box::new(std::io::stderr()),
-    };
-    executable.wire(builtin_wiring)?;
+    executable.wire(IoWiring {
+        stdin: Stream::Inherited,
+        stdout: Stream::Inherited,
+        stderr: Stream::Inherited,
+    })?;
     executable.spawn(state)?;
     executable.wait()?;
 
     Ok(())
 }
-
-// fn execute_simple(cmd: &ExecCommand, state: &mut ShellState) -> Result<(), ShellError> {
-//     let builtin_wiring = IoWiring {
-//         stdin: Box::new(std::io::stdin()),
-//         stdout: Box::new(std::io::stdout()),
-//         stderr: Box::new(std::io::stderr()),
-//     };
-
-//     match cmd.program.as_str() {
-//         "ls" => {
-//             let mut cmd = builtins::ls::new(cmd);
-//             cmd.wire(builtin_wiring);
-//             cmd.spawn(state)?;
-//             cmd.wait()
-//         }
-//         "cd" => {
-//             let mut cmd = builtins::cd::new(cmd);
-//             cmd.wire(builtin_wiring);
-//             cmd.spawn(state)?;
-//             cmd.wait()
-//         }
-//         "pwd" => {
-//             let mut cmd = builtins::pwd::new();
-//             cmd.wire(builtin_wiring);
-//             cmd.spawn(state)?;
-//             cmd.wait()
-//         }
-//         "exit" => {
-//             let mut cmd = builtins::exit::new();
-//             cmd.wire(builtin_wiring);
-//             cmd.spawn(state)?;
-//             cmd.wait()
-//         }
-//         _ => {
-//             let mut cmd = external::new(cmd);
-//             if let Err(ShellError::ExecutionError(e)) = cmd.spawn(state) {
-//                 eprintln!("{}", e);
-//             };
-//             cmd.wait()
-//         }
-//     };
-
-//     Ok(())
-// }

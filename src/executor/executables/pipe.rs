@@ -1,8 +1,8 @@
-use std::io::{self, Read, Write, pipe};
+use std::io::pipe;
 
 use super::make_executable;
 use crate::{
-    executor::{Executable, IoWiring},
+    executor::{Executable, IoWiring, Stdin, Stdout, Stream},
     parser::PipeCommand,
     shell_error::ShellError,
     shell_state::ShellState,
@@ -18,14 +18,8 @@ impl<'a> Executable for Pipeline<'a> {
             return Ok(());
         }
 
-        let IoWiring {
-            stdin: pipeline_stdin,
-            stdout: pipeline_stdout,
-            stderr: _,
-        } = io;
-
-        let mut pipeline_stdin = Some(pipeline_stdin);
-        let mut pipeline_stdout = Some(pipeline_stdout);
+        let mut pipeline_stdin = Some(io.stdin);
+        let mut pipeline_stdout = Some(io.stdout);
 
         let n = self.commands.len();
 
@@ -39,25 +33,25 @@ impl<'a> Executable for Pipeline<'a> {
         }
 
         for i in 0..n {
-            let stdin: Box<dyn Read + Send> = if i == 0 {
+            let stdin: Stdin = if i == 0 {
                 // First command reads from pipeline stdin
                 pipeline_stdin.take().expect("pipeline stdin already taken")
             } else {
                 // Read end of previous pipe
-                Box::new(pipes[i - 1].0.try_clone()?)
+                Stream::Piped(Box::new(pipes[i - 1].0.try_clone()?))
             };
 
-            let stdout: Box<dyn Write + Send> = if i == n - 1 {
+            let stdout: Stdout = if i == n - 1 {
                 // Last command writes to pipeline stdout
                 pipeline_stdout
                     .take()
                     .expect("pipeline stdout already taken")
             } else {
                 // Write end of current pipe
-                Box::new(pipes[i].1.try_clone()?)
+                Stream::Piped(Box::new(pipes[i].1.try_clone()?))
             };
 
-            let stderr = Box::new(io::stderr());
+            let stderr = Stream::Inherited;
 
             self.commands[i].wire(IoWiring {
                 stdin,

@@ -1,8 +1,14 @@
-use crate::{
-    executor::{ExecCommand, IoWiring},
-    shell_state::ShellState,
+use crate::{executor::ExecCommand, shell_state::ShellState};
+use std::{
+    io::{Read, Write},
+    path::PathBuf,
 };
-use std::path::PathBuf;
+
+pub struct BuiltinWiring {
+    pub stdin: Box<dyn Read + Send>,
+    pub stdout: Box<dyn Write + Send>,
+    pub stderr: Box<dyn Write + Send>,
+}
 
 pub fn get_target_path(cmd: &ExecCommand, state: &ShellState) -> PathBuf {
     match cmd.args.get(0) {
@@ -18,10 +24,10 @@ pub fn get_target_path(cmd: &ExecCommand, state: &ShellState) -> PathBuf {
     }
 }
 
-pub fn get_default_wiring() -> IoWiring {
-    IoWiring {
-        stdin: Box::new(std::io::stdin()),
-        stdout: Box::new(std::io::stdout()),
-        stderr: Box::new(std::io::stderr()),
+pub fn get_default_builtin_wiring() -> BuiltinWiring {
+    BuiltinWiring {
+        stdin: (Box::new(std::io::stdin())),
+        stdout: (Box::new(std::io::stdout())),
+        stderr: (Box::new(std::io::stderr())),
     }
 }
