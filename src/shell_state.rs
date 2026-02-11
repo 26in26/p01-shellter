@@ -1,6 +1,7 @@
 use std::path::{self, absolute};
 
 pub struct ShellState {
+    last_status: i32,
     cwd: path::PathBuf,
     pub exit: bool,
 }
@@ -19,6 +20,14 @@ impl ShellState {
 
         self.cwd = absolute_cwd;
     }
+
+    pub fn get_last_status(&self) -> i32 {
+        self.last_status
+    }
+
+    pub fn set_status(&mut self, status: i32) {
+        self.last_status = status;
+    }
 }
 
 pub fn new() -> ShellState {
@@ -30,6 +39,7 @@ pub fn new() -> ShellState {
     };
 
     ShellState {
+        last_status: 0,
         cwd: absolute_cwd,
         exit: false,
     }

@@ -33,7 +33,7 @@ pub trait Executable {
     fn wait(&mut self) -> Result<i32, ShellError>;
 }
 
-pub fn execute(cmd: &Command, state: &mut ShellState) -> Result<(), ShellError> {
+pub fn execute(cmd: &Command, state: &mut ShellState) -> Result<i32, ShellError> {
     let mut executable = executables::make_executable(cmd);
     executable.wire(IoWiring {
         stdin: Stream::Inherited,
@@ -41,7 +41,6 @@ pub fn execute(cmd: &Command, state: &mut ShellState) -> Result<(), ShellError> 
         stderr: Stream::Inherited,
     })?;
     executable.spawn(state)?;
-    executable.wait()?;
 
-    Ok(())
+    executable.wait()
 }

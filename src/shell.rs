@@ -39,17 +39,24 @@ impl Shell {
             };
 
             match execute(&cmd, &mut self.state) {
-                Ok(_) => {}
-                Err(ShellError::CommandNotFound(cmd)) => {
-                    eprintln!("Command not found: {}", cmd);
+                Ok(status) => {
+                    self.state.set_status(status);
                 }
-                Err(ShellError::ExecutionError(msg)) => {
-                    eprintln!("Execution error: {}", msg);
+                Err(shell_error) => {
+                    self.state.set_status(1);
+                    match shell_error {
+                        ShellError::CommandNotFound(cmd) => {
+                            eprintln!("Command not found: {}", cmd);
+                        }
+                        ShellError::ExecutionError(msg) => {
+                            eprintln!("Execution error: {}", msg);
+                        }
+                        ShellError::IoError(e) => {
+                            eprintln!("IO error: {}", e);
+                        }
+                        _ => {}
+                    }
                 }
-                Err(ShellError::IoError(e)) => {
-                    eprintln!("IO error: {}", e);
-                }
-                _ => {}
             }
 
             if self.state.exit {
@@ -64,7 +71,7 @@ impl Shell {
     }
 
     fn print_prompt(&self) {
-        let status = if 1 == 0 {
+        let status = if self.state.get_last_status() == 0 {
             theme::success()
         } else {
             theme::error()
