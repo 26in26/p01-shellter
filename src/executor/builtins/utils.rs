@@ -5,9 +5,9 @@ use std::{
 };
 
 pub struct BuiltinWiring {
-    pub stdin: Box<dyn Read + Send>,
-    pub stdout: Box<dyn Write + Send>,
-    pub stderr: Box<dyn Write + Send>,
+    pub stdin: Option<Box<dyn Read + Send>>,
+    pub stdout: Option<Box<dyn Write + Send>>,
+    pub stderr: Option<Box<dyn Write + Send>>,
 }
 
 pub fn get_target_path(cmd: &ExecCommand, state: &ShellState) -> PathBuf {
@@ -26,8 +26,8 @@ pub fn get_target_path(cmd: &ExecCommand, state: &ShellState) -> PathBuf {
 
 pub fn get_default_builtin_wiring() -> BuiltinWiring {
     BuiltinWiring {
-        stdin: (Box::new(std::io::stdin())),
-        stdout: (Box::new(std::io::stdout())),
-        stderr: (Box::new(std::io::stderr())),
+        stdin: Some(Box::new(std::io::stdin())),
+        stdout: Some(Box::new(std::io::stdout())),
+        stderr: Some(Box::new(std::io::stderr())),
     }
 }

@@ -86,18 +86,19 @@ impl<'a> Executable for Ls<'a> {
 
         self.wires.stdin = match wiring.stdin {
             Stream::Piped(stdin) => Some(stdin),
-            _ => Some(default_wiring.stdin),
+            _ => default_wiring.stdin,
         };
 
         self.wires.stdout = match wiring.stdout {
             Stream::Piped(stdout) => Some(stdout),
-            _ => Some(default_wiring.stdout),
+            _ => default_wiring.stdout,
         };
 
         self.wires.stderr = match wiring.stderr {
             Stream::Piped(stderr) => Some(stderr),
-            _ => Some(default_wiring.stderr),
+            _ => default_wiring.stderr,
         };
+
         Ok(())
     }
 
